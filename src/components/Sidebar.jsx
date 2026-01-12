@@ -184,6 +184,7 @@ export default function Sidebar() {
         title="Log out"
         message="Haqiqatan ham chiqib ketmoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi."
         isLoading={loading}
+        status="error"
       />
     </div>
   );

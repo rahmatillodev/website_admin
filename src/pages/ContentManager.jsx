@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Toggle } from '@/components/ui/toggle'
-import useContentStore from '@/stores/contentStore'
+import userStore from '@/stores/usersStore'
 
 const typeIcons = {
   Reading: Book,
@@ -15,16 +15,12 @@ const typeIcons = {
 }
 
 export default function ContentManager() {
-  const { tests, loading, fetchTests, updateTestStatus } = useContentStore()
-
-  useEffect(() => {
-    fetchTests()
-  }, [fetchTests])
+  const { tests, loading } = userStore();
 
   const handleStatusToggle = (testId, currentStatus) => {
     const newStatus = currentStatus === 'Premium' ? 'Free' : 'Premium'
-    updateTestStatus(testId, newStatus)
-  }
+    updateTestStatus(testId, newStatus);
+  };
 
   return (
     <div className="p-6 space-y-6">

@@ -9,6 +9,8 @@ import UserManagement from './pages/UserManagement'
 import Settings from './pages/Settings'
 import useAuthStore from './stores/authStore'
 import { ToastContainer } from 'react-toastify'
+import './App.css'  
+import UserFormPage from './pages/UsersFormPage'
 
 function App() {
   const { checkSession } = useAuthStore()
@@ -35,6 +37,7 @@ function App() {
           <Route path="content" element={<ContentManager />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="/users/edit/:id" element={<UserFormPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

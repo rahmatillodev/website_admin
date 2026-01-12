@@ -1,103 +1,118 @@
-import { useEffect } from 'react'
-import { Users, Crown, Bell, DollarSign, TrendingUp } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { useEffect } from "react";
+import { Users, Crown, Bell, DollarSign, TrendingUp } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import userStore from "@/stores/usersStore";
 
 const metricCards = [
   {
-    title: 'Total Users',
-    value: '12,345',
+    title: "Total Users",
+    value: "12,345",
     icon: Users,
-    change: '+12.5%',
-    trend: 'up',
-    color: 'text-blue-600',
+    change: "+12.5%",
+    trend: "up",
+    color: "text-blue-600",
   },
   {
-    title: 'Active Premium',
-    value: '3,284',
+    title: "Active Premium",
+    value: "3,284",
     icon: Crown,
-    change: '+8.2%',
-    trend: 'up',
-    color: 'text-purple-600',
+    change: "+8.2%",
+    trend: "up",
+    color: "text-purple-600",
   },
   {
-    title: 'Pending Notifications',
-    value: '24',
+    title: "Pending Notifications",
+    value: "24",
     icon: Bell,
-    change: '-5.1%',
-    trend: 'down',
-    color: 'text-orange-600',
+    change: "-5.1%",
+    trend: "down",
+    color: "text-orange-600",
   },
   {
-    title: 'Monthly Revenue',
-    value: '$48,920',
+    title: "Monthly Revenue",
+    value: "$48,920",
     icon: DollarSign,
-    change: '+15.3%',
-    trend: 'up',
-    color: 'text-green-600',
+    change: "+15.3%",
+    trend: "up",
+    color: "text-green-600",
   },
-]
+];
 
 const needsAttention = [
   {
     id: 1,
-    user: 'Ahmed Khan',
-    email: 'ahmed.k@example.com',
-    issue: 'Pending Payment Verification',
-    priority: 'high',
-    date: '2 hours ago',
+    user: "Ahmed Khan",
+    email: "ahmed.k@example.com",
+    issue: "Pending Payment Verification",
+    priority: "high",
+    date: "2 hours ago",
   },
   {
     id: 2,
-    user: 'Sarah Jenkins',
-    email: 'sarah.j@example.com',
-    issue: 'Account Activation Required',
-    priority: 'medium',
-    date: '5 hours ago',
+    user: "Sarah Jenkins",
+    email: "sarah.j@example.com",
+    issue: "Account Activation Required",
+    priority: "medium",
+    date: "5 hours ago",
   },
   {
     id: 3,
-    user: 'Li Wei',
-    email: 'l.wei@example.com',
-    issue: 'Subscription Renewal Reminder',
-    priority: 'low',
-    date: '1 day ago',
+    user: "Li Wei",
+    email: "l.wei@example.com",
+    issue: "Subscription Renewal Reminder",
+    priority: "low",
+    date: "1 day ago",
   },
-]
+];
 
 const recentActivity = [
   {
     id: 1,
-    action: 'New user registered',
-    user: 'Emily Davis',
-    time: '5 minutes ago',
-    type: 'user',
+    action: "New user registered",
+    user: "Emily Davis",
+    time: "5 minutes ago",
+    type: "user",
   },
   {
     id: 2,
-    action: 'Premium subscription purchased',
-    user: 'Michael Johnson',
-    time: '15 minutes ago',
-    type: 'premium',
+    action: "Premium subscription purchased",
+    user: "Michael Johnson",
+    time: "15 minutes ago",
+    type: "premium",
   },
   {
     id: 3,
-    action: 'Test completed',
-    test: 'Academic Reading Test 14',
-    time: '1 hour ago',
-    type: 'test',
+    action: "Test completed",
+    test: "Academic Reading Test 14",
+    time: "1 hour ago",
+    type: "test",
   },
   {
     id: 4,
-    action: 'Content updated',
-    item: 'General Listening Test 05',
-    time: '2 hours ago',
-    type: 'content',
+    action: "Content updated",
+    item: "General Listening Test 05",
+    time: "2 hours ago",
+    type: "content",
   },
-]
+];
 
 export default function Dashboard() {
+ 
   return (
     <div className="p-6 space-y-6">
       {/* Page Header */}
@@ -121,12 +136,16 @@ export default function Dashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{card.value}</div>
               <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                <TrendingUp 
+                <TrendingUp
                   className={`h-3 w-3 ${
-                    card.trend === 'up' ? 'text-green-500' : 'text-red-500'
-                  }`} 
+                    card.trend === "up" ? "text-green-500" : "text-red-500"
+                  }`}
                 />
-                <span className={card.trend === 'up' ? 'text-green-600' : 'text-red-600'}>
+                <span
+                  className={
+                    card.trend === "up" ? "text-green-600" : "text-red-600"
+                  }
+                >
                   {card.change}
                 </span>
                 <span>from last month</span>
@@ -168,14 +187,15 @@ export default function Dashboard() {
                   <TableCell>
                     <Badge
                       variant={
-                        item.priority === 'high'
-                          ? 'destructive'
-                          : item.priority === 'medium'
-                          ? 'pending'
-                          : 'secondary'
+                        item.priority === "high"
+                          ? "destructive"
+                          : item.priority === "medium"
+                          ? "pending"
+                          : "secondary"
                       }
                     >
-                      {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
+                      {item.priority.charAt(0).toUpperCase() +
+                        item.priority.slice(1)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-gray-500">{item.date}</TableCell>
@@ -212,18 +232,28 @@ export default function Dashboard() {
                 <div className="flex-1 pb-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-medium">{activity.action}</span>
+                      <span className="text-sm font-medium">
+                        {activity.action}
+                      </span>
                       {activity.user && (
-                        <span className="text-sm text-gray-600 ml-1">— {activity.user}</span>
+                        <span className="text-sm text-gray-600 ml-1">
+                          — {activity.user}
+                        </span>
                       )}
                       {activity.test && (
-                        <span className="text-sm text-gray-600 ml-1">— {activity.test}</span>
+                        <span className="text-sm text-gray-600 ml-1">
+                          — {activity.test}
+                        </span>
                       )}
                       {activity.item && (
-                        <span className="text-sm text-gray-600 ml-1">— {activity.item}</span>
+                        <span className="text-sm text-gray-600 ml-1">
+                          — {activity.item}
+                        </span>
                       )}
                     </div>
-                    <span className="text-xs text-gray-500">{activity.time}</span>
+                    <span className="text-xs text-gray-500">
+                      {activity.time}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -232,6 +262,5 @@ export default function Dashboard() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
-

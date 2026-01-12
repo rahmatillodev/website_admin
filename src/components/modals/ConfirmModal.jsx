@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 
- function ConfirmModal({ isOpen, onClose, onConfirm, title, message, isLoading }) {
+ function ConfirmModal({ isOpen, onClose, onConfirm, title, message, isLoading , status }) {
   if (!isOpen) return null;
 
   return (
@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
           </Button>
           <Button 
             onClick={onConfirm}
-            className="bg-blue-600 hover:bg-blue-700 rounded-xl px-6"
+            className={`${status === 'success' ? 'bg-green-600 hover:bg-green-700' : status === 'error' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'} rounded-xl px-6`}
             disabled={isLoading}
           >
             {isLoading ? "Saqlanmoqda..." : "Tasdiqlash"}
