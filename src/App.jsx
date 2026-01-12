@@ -13,11 +13,11 @@ import './App.css'
 import UserFormPage from './pages/UsersFormPage'
 
 function App() {
-  const { checkSession } = useAuthStore()
+  const { initializeAuth } = useAuthStore()
 
   useEffect(() => {
-    checkSession()
-  }, [checkSession])
+    initializeAuth()
+  }, [initializeAuth])
 
   return (
     <BrowserRouter>

@@ -30,7 +30,7 @@ export default function Sidebar() {
   const handleConfirmLogOut = async () => {
     try {
       setLoading(true);
-      signOut();
+      await signOut();
       navigate("/login");
       setLoading(false);
       setIsLogOutModalOpen(false);

@@ -15,18 +15,18 @@ import { toast } from "react-toastify";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { signIn, user, checkSession, fetchUserRole } = useAuthStore();
+  const { signIn, user, signOut, fetchUserRole, loading: authLoading } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    checkSession();
-    if (user) {
+    // If user is already logged in, redirect to dashboard
+    if (!authLoading && user) {
       navigate("/dashboard");
     }
-  }, [user, navigate, checkSession]);
+  }, [user, navigate, authLoading]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,6 +47,8 @@ export default function Login() {
     if (role !== "admin") {
       setError("You are not authorized as admin");
       toast.error("You are not authorized as admin");
+      // Sign out the user since they're not authorized
+      await signOut();
       setLoading(false);
       return;
     }
