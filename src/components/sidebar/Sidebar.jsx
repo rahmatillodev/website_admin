@@ -10,8 +10,8 @@ import {
 import { cn } from "@/lib/utils"; 
 import useAuthStore from "@/stores/authStore";
 import { useNavigate } from "react-router-dom";
-import ConfirmModal from "./modals/ConfirmModal";
 import { toast } from "react-toastify";
+import ConfirmModal from "../modals/ConfirmModal";
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: MdDashboard },
   { name: "Content Manager", href: "/content", icon: MdDescription },

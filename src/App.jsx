@@ -11,6 +11,7 @@ import useAuthStore from './stores/authStore'
 import { ToastContainer } from 'react-toastify'
 import './App.css'  
 import UserFormPage from './pages/UsersFormPage'
+import ContentFormPage from './pages/ContentFormPage'
 
 function App() {
   const { initializeAuth } = useAuthStore()
@@ -38,6 +39,8 @@ function App() {
           <Route path="users" element={<UserManagement />} />
           <Route path="settings" element={<Settings />} />
           <Route path="/users/edit/:id" element={<UserFormPage />} />
+          <Route path="/content/new" element={<ContentFormPage />} />
+          <Route path="/content/edit/:id" element={<ContentFormPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

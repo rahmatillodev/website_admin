@@ -1,17 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
-import {
-  Search,
-  Download,
-  Edit,
-  Trash2,
-  CheckCircle2,
-} from "lucide-react";
+import { Search, Download, Edit, Trash2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -27,12 +18,20 @@ import { debounce } from "lodash";
 import { useNavigate } from "react-router-dom";
 import ConfirmModal from "@/components/modals/ConfirmModal";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import Pagination from "@/components/Pagination";
 
 export default function UserManagement() {
-  const { users, loading, fetchUsers, totalCount, currentPage, pageSize, deleteUser } =
-    userStore();
+  const {
+    users,
+    loading,
+    fetchUsers,
+    totalCount,
+    currentPage,
+    pageSize,
+    deleteUser,
+  } = userStore();
   const navigate = useNavigate();
-  
+
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     userId: null,
@@ -43,8 +42,6 @@ export default function UserManagement() {
   // Local state qidiruvni tezkor ko'rsatish uchun
   const [searchTerm, setSearchTerm] = useState("");
   const [status, setStatus] = useState("All");
-
-
 
   // 2. Debounced Search funksiyasi
   const debouncedSearch = useCallback(
@@ -140,7 +137,6 @@ export default function UserManagement() {
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-         
         </div>
       </div>
 
@@ -179,7 +175,6 @@ export default function UserManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>No</TableHead>
-                <TableHead>ID</TableHead>
                 <TableHead>Image</TableHead>
                 <TableHead>USER NAME</TableHead>
                 <TableHead>USER EMAIL</TableHead>
@@ -202,7 +197,6 @@ export default function UserManagement() {
                 users.map((user, index) => (
                   <TableRow key={user.id}>
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell>{user.user_id}</TableCell>
                     <TableCell>
                       <img
                         src={
@@ -237,8 +231,8 @@ export default function UserManagement() {
                             Verify
                           </Button>
                         )}
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           onClick={() => handleEditClick(user.id)}
                         >
@@ -263,80 +257,15 @@ export default function UserManagement() {
       </Card>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Show</span>
-          <select
-            value={pageSize}
-            onChange={handleLimitChange}
-            className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="40">40</option>
-          </select>
-          <span className="text-sm text-gray-600">entries</span>
-        </div>
-
-        <div className="text-sm text-gray-500">
-          Showing {(currentPage - 1) * pageSize + 1} to{" "}
-          {Math.min(currentPage * pageSize, totalCount)} of {totalCount} users
-        </div>
-
-        <div className="flex items-center justify-center mt-6">
-  <div className="flex items-center -space-x-px border rounded-lg overflow-hidden bg-white shadow-sm">
-    {/* Previous Button */}
-    <button
-      onClick={() => handlePageChange(currentPage - 1)}
-      disabled={currentPage === 1 || loading}
-      className="px-3 py-2 border-r hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-    >
-      <FaChevronLeft size={18} className="text-gray-600" />
-    </button>
-
-    {/* Sahifa raqamlari */}
-    {Array.from({ length: Math.ceil(totalCount / pageSize) }, (_, i) => {
-      const pageNum = i + 1;
-      
-      // Faqat kerakli sahifalarni ko'rsatish (Logic: joriy sahifa va uning atrofidagilar)
-      if (
-        pageNum === 1 || 
-        pageNum === Math.ceil(totalCount / pageSize) || 
-        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-      ) {
-        return (
-          <button
-            key={pageNum}
-            onClick={() => handlePageChange(pageNum)}
-            className={`px-4 py-2 border-r last:border-r-0 text-sm font-medium transition-colors ${
-              currentPage === pageNum 
-                ? "bg-blue-50 text-blue-600" 
-                : "text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            {pageNum}
-          </button>
-        );
-      } else if (
-        pageNum === currentPage - 2 || 
-        pageNum === currentPage + 2
-      ) {
-        return <span key={pageNum} className="px-3 py-2 border-r text-gray-400">...</span>;
-      }
-      return null;
-    })}
-
-    {/* Next Button */}
-    <button
-      onClick={() => handlePageChange(currentPage + 1)}
-      disabled={currentPage === Math.ceil(totalCount / pageSize) || loading}
-      className="px-3 py-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-    >
-      <FaChevronRight size={18} className="text-gray-600" />
-    </button>
-  </div>
-</div>
-      </div>
+     <Pagination
+     currentPage={currentPage}
+     pageSize={pageSize}
+     totalCount={totalCount}
+     handlePageChange={handlePageChange}
+     handleLimitChange={handleLimitChange}
+     title="users"
+     loading={loading}
+     />
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal
