@@ -56,8 +56,60 @@ export const useTestStore = create((set, get) => ({
   deleteTest: async (testId) => {
     set({ loading: true, error: null });
     try {
+      // 1. Get all parts related to this test
+      const { data: existingParts, error: partsError } = await supabase
+        .from("part")
+        .select("id")
+        .eq("test_id", testId);
+      
+      if (partsError) throw partsError;
+
+      // 2. Delete related questions and question groups if parts exist
+      if (existingParts && existingParts.length > 0) {
+        const partIds = existingParts.map(p => p.id);
+        
+        // Get all question groups for these parts
+        const { data: existingGroups, error: groupsError } = await supabase
+          .from("question")
+          .select("id")
+          .in("part_id", partIds);
+        
+        if (groupsError) throw groupsError;
+
+        if (existingGroups && existingGroups.length > 0) {
+          const groupIds = existingGroups.map(g => g.id);
+          
+          // Delete questions (from questions table)
+          const { error: questionsError } = await supabase
+            .from("questions")
+            .delete()
+            .in("question_id", groupIds);
+          
+          if (questionsError) throw questionsError;
+
+          // Delete question groups (from question table)
+          const { error: questionGroupsError } = await supabase
+            .from("question")
+            .delete()
+            .in("part_id", partIds);
+          
+          if (questionGroupsError) throw questionGroupsError;
+        }
+
+        // Delete parts
+        const { error: partsDeleteError } = await supabase
+          .from("part")
+          .delete()
+          .eq("test_id", testId);
+        
+        if (partsDeleteError) throw partsDeleteError;
+      }
+
+      // 3. Finally, delete the test itself
       const { error } = await supabase.from("test").delete().eq("id", testId);
       if (error) throw error;
+
+      // Update local state
       set((state) => ({
         tests: state.tests.filter((t) => t.id !== testId),
         loading: false,
@@ -66,7 +118,7 @@ export const useTestStore = create((set, get) => ({
     } catch (error) {
       set({ error: error.message, loading: false });
       toast.error("Failed to delete test");
-      console.error("Delete test error:", error);
+      console.error("Delete test error:", error.message);
     }
   },
 
