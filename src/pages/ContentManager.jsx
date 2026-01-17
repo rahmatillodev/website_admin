@@ -11,7 +11,6 @@ import { useNavigate } from 'react-router-dom'
 import ConfirmModal from '@/components/modals/ConfirmModal'
 import Pagination from '@/components/Pagination'
 import { format } from 'date-fns'
-// O'zingizning modal komponentingizni import qiling
 
 
 export default function ContentManager() {
@@ -21,15 +20,21 @@ export default function ContentManager() {
     writing: Pen,
   }
   const navigate = useNavigate();
-  const { tests, totalCount, loading, fetchTests, updateTest, deleteTest } = useTestStore();
-
-  // Pagination va Filter States
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+  const { 
+    tests, 
+    totalCount, 
+    loading, 
+    fetchTests, 
+    updateTest, 
+    deleteTest, 
+    searchQuery, 
+    typeFilter,
+    setSearchQuery,
+    setTypeFilter
+  } = useTestStore();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  
-  // Delete Modal State
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     id: null,
@@ -37,37 +42,66 @@ export default function ContentManager() {
     isLoading: false
   });
 
-  // Track previous values to detect changes
+  const searchDebounceTimer = useRef(null);
   const prevPageSizeRef = useRef(pageSize);
   const prevCurrentPageRef = useRef(currentPage);
+  const prevSearchQueryRef = useRef(searchQuery);
+  const prevTypeFilterRef = useRef(typeFilter);
   const isInitialMount = useRef(true);
 
+  // Sync local search query with store on mount
   useEffect(() => {
-    // Fetch on initial mount (when site is accessed)
+    setLocalSearchQuery(searchQuery);
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
     if (isInitialMount.current) {
-      fetchTests(currentPage, pageSize);
+      fetchTests(currentPage, pageSize, searchQuery, typeFilter);
       isInitialMount.current = false;
       prevPageSizeRef.current = pageSize;
       prevCurrentPageRef.current = currentPage;
+      prevSearchQueryRef.current = searchQuery;
+      prevTypeFilterRef.current = typeFilter;
       return;
     }
+  }, []);
 
-    // Fetch when pageSize changes
-    if (prevPageSizeRef.current !== pageSize) {
-      fetchTests(currentPage, pageSize);
+  // Handle search/filter/pagination changes
+  useEffect(() => {
+    if (isInitialMount.current) return;
+
+    const hasSearchChanged = prevSearchQueryRef.current !== searchQuery;
+    const hasTypeFilterChanged = prevTypeFilterRef.current !== typeFilter;
+    const hasPageSizeChanged = prevPageSizeRef.current !== pageSize;
+    const hasCurrentPageChanged = prevCurrentPageRef.current !== currentPage;
+
+    if (hasSearchChanged || hasTypeFilterChanged || hasPageSizeChanged || hasCurrentPageChanged) {
+      // Reset to page 1 when search or filter changes
+      if ((hasSearchChanged || hasTypeFilterChanged) && currentPage !== 1) {
+        setCurrentPage(1);
+        prevCurrentPageRef.current = 1;
+        fetchTests(1, pageSize, searchQuery, typeFilter);
+      } else {
+        fetchTests(currentPage, pageSize, searchQuery, typeFilter);
+      }
+
       prevPageSizeRef.current = pageSize;
       prevCurrentPageRef.current = currentPage;
-      return;
+      prevSearchQueryRef.current = searchQuery;
+      prevTypeFilterRef.current = typeFilter;
     }
+  }, [currentPage, pageSize, searchQuery, typeFilter, fetchTests]);
 
-    // Fetch when currentPage changes (through pagination)
-    if (prevCurrentPageRef.current !== currentPage) {
-      fetchTests(currentPage, pageSize);
-      prevCurrentPageRef.current = currentPage;
-    }
-  }, [currentPage, pageSize, fetchTests]);
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimer.current) {
+        clearTimeout(searchDebounceTimer.current);
+      }
+    };
+  }, []);
 
-  // Pagination logics
   const totalPages = Math.ceil(totalCount / pageSize);
 
   const handlePageChange = (newPage) => {
@@ -78,15 +112,13 @@ export default function ContentManager() {
 
   const handleLimitChange = (e) => {
     setPageSize(parseInt(e.target.value));
-    setCurrentPage(1); // Limit o'zgarganda birinchi betga qaytish
+    setCurrentPage(1);
   };
 
-  // Premium toggle
   const handlePremiumToggle = async (testId, currentStatus) => {
     await updateTest(testId, { is_premium: !currentStatus });
   };
 
-  // Delete modal handlers
   const openDeleteModal = (id, title) => {
     setDeleteModal({ isOpen: true, id, title, isLoading: false });
   };
@@ -95,20 +127,30 @@ export default function ContentManager() {
     setDeleteModal(prev => ({ ...prev, isLoading: true }));
     await deleteTest(deleteModal.id);
     setDeleteModal({ isOpen: false, id: null, title: '', isLoading: false });
-    // Agar oxirgi element o'chsa va sahifa bo'sh qolsa, oldingi sahifaga o'tish
     if (tests.length === 1 && currentPage > 1) setCurrentPage(currentPage - 1);
   };
 
-  // Filter tests based on search term and type
-  const filteredTests = tests.filter(test => {
-    const matchesSearch = 
-      test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      test.id.toString().includes(searchTerm);
-    
-    const matchesType = !typeFilter || test.type?.toLowerCase() === typeFilter.toLowerCase();
-    
-    return matchesSearch && matchesType;
-  });
+  // Handle search input with debounce
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setLocalSearchQuery(value);
+
+    // Clear existing timer
+    if (searchDebounceTimer.current) {
+      clearTimeout(searchDebounceTimer.current);
+    }
+
+    // Set new timer for debounced search
+    searchDebounceTimer.current = setTimeout(() => {
+      setSearchQuery(value);
+    }, 500); // 500ms debounce
+  };
+
+  // Handle filter change
+  const handleFilterChange = (e) => {
+    const value = e.target.value;
+    setTypeFilter(value);
+  };
 
   const formattedDate = (date) => {
     const simpleDate = format(new Date(date), "MMM dd, yyyy HH:mm");
@@ -130,7 +172,6 @@ export default function ContentManager() {
         </Button>
       </div>
 
-      {/* Filter bar */}
       <Card className="shadow-sm border-none">
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
@@ -139,24 +180,22 @@ export default function ContentManager() {
               <Input
                 placeholder="Search tests..."
                 className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={localSearchQuery}
+                onChange={handleSearchChange}
               />
             </div>
             <select 
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={handleFilterChange}
               className="h-10 rounded-md border bg-white px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">All Types</option>
-              <option value="reading">Reading</option>
-              <option value="listening">Listening</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Table Section */}
+          >
+            <option value="">All Types</option>
+            <option value="reading">Reading</option>
+            <option value="listening">Listening</option>
+          </select>
+        </div>
+      </CardContent>
+    </Card>
       <Card className="shadow-sm border-none overflow-hidden">
         <Table>
           <TableHeader className="bg-gray-50">
@@ -172,11 +211,11 @@ export default function ContentManager() {
           </TableHeader>
           <TableBody className="bg-white">
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-20 text-gray-400">Loading data...</TableCell></TableRow>
-            ) : filteredTests.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-20 text-gray-400">No tests found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-20 text-gray-400">Loading data...</TableCell></TableRow>
+            ) : tests.length === 0 ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-20 text-gray-400">No tests found.</TableCell></TableRow>
             ) : (
-              filteredTests.map((test) => {
+              tests.map((test) => {
                 const Icon = typeIcons[test.type?.toLowerCase()] || Book;
                 return (
                   <TableRow key={test.id} className="hover:bg-gray-50/50 transition-colors">

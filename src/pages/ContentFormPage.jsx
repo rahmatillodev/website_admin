@@ -23,7 +23,7 @@ import {
 /**
  * Utility function to recalculate global question numbers across all parts and groups
  * Ensures sequential numbering: Part 1 Group 1 Q1-Q3, Part 1 Group 2 Q4-Q5, Part 2 Group 1 Q6-Q8, etc.
- * For fill_in_blanks, also updates placeholders [N] in the content/question_text to match global question numbers.
+ * For fill_in_blanks, keeps ___ placeholders as-is in the content/question_text.
  */
 const recalculateGlobalQuestionNumbers = (parts) => {
   let globalQuestionCounter = 1;
@@ -39,33 +39,18 @@ const recalculateGlobalQuestionNumbers = (parts) => {
         // Store the starting question number for this group
         updatedGroup._startQuestionNumber = globalQuestionCounter;
         
-        // Update placeholders in content/question_text to match global question numbers
-        // Replace all [N] placeholders with new sequential numbers starting from globalQuestionCounter
+        // For fill_in_blanks, we keep ___ placeholders as-is (no conversion needed)
+        // The content/question_text should already contain ___ placeholders
+        // Just ensure both fields are consistent
         if (updatedGroup.content || updatedGroup.question_text) {
           const text = updatedGroup.content || updatedGroup.question_text || "";
-          let updatedText = text;
           
-          // Find all existing placeholders [N] and replace them sequentially
-          const placeholderRegex = /\[\d+\]/g;
-          const placeholders = text.match(placeholderRegex) || [];
-          
-          if (placeholders.length > 0) {
-            // Replace placeholders one by one with new numbers
-            let placeholderIndex = 0;
-            updatedText = text.replace(placeholderRegex, () => {
-              const newNumber = globalQuestionCounter + placeholderIndex;
-              placeholderIndex++;
-              return `[${newNumber}]`;
-            });
-          } else {
-            // If no placeholders exist but we have answers, add them
-            // This handles the case where content exists but placeholders weren't added yet
-            // We'll let CardFillBlanks handle adding placeholders when user edits
-          }
+          // Normalize any 4+ underscores to exactly 3 underscores
+          const normalizedText = text.replace(/_{4,}/g, "___");
           
           // Store in both content and question_text for consistency
-          updatedGroup.content = updatedText;
-          updatedGroup.question_text = updatedText;
+          updatedGroup.content = normalizedText;
+          updatedGroup.question_text = normalizedText;
         }
         
         globalQuestionCounter += answerCount;
@@ -76,14 +61,17 @@ const recalculateGlobalQuestionNumbers = (parts) => {
         const questionCount = correctQuestions.length;
         updatedGroup._startQuestionNumber = globalQuestionCounter;
         // Update question numbers only for correct answers, keep distractors with null
+        // Ensure question_text matches correct_answer (question_text stores the answer, not the full passage)
         updatedGroup.questions = [
           ...correctQuestions.map((q, idx) => ({
             ...q,
             question_number: globalQuestionCounter + idx,
+            question_text: q.correct_answer || q.question_text || "", // question_text stores the answer
           })),
           ...distractors.map(q => ({
             ...q,
             question_number: null, // Distractors have null question_number
+            question_text: q.correct_answer || q.question_text || "", // question_text stores the answer
           }))
         ];
         globalQuestionCounter += questionCount;
@@ -205,18 +193,19 @@ export default function ContentFormPage() {
 
                 if (qGroup.type === "fill_in_blanks") {
                   // For fill_in_blanks, answers come from the questions' correct_answer (mapped from DB's correct_answers)
-                  // The question_text contains the passage with [N] placeholders
+                  // The question_text contains the passage with ___ placeholders
                   const passageText = qGroup.question_text || qGroup.content || "";
                   groupData.content = passageText;
                   groupData.question_text = passageText; // Store in both for consistency
                   
                   // Extract answers from questions array, ordered by question_number
                   // Sort questions by question_number to ensure correct order
+                  // For fill_in_blanks, question_text in DB should contain the answer, but we use correct_answer as fallback
                   const sortedQuestions = [...questions].sort((a, b) => 
                     (a.question_number || 0) - (b.question_number || 0)
                   );
                   groupData.answers = sortedQuestions.map(
-                    (q) => q.correct_answer || ""
+                    (q) => q.question_text || q.correct_answer || "" // Prefer question_text (answer), fallback to correct_answer
                   );
                 } else if (qGroup.type === "drag_drop") {
                   groupData.content =
@@ -234,72 +223,181 @@ export default function ContentFormPage() {
                   );
                   
                   // Store correct answers in questions array with is_correct: true
-                  groupData.questions = sortedCorrectAnswers.map(q => ({
-                    id: q.id,
-                    question_number: q.question_number || 1,
-                    correct_answer: q.correct_answer || "",
-                    is_correct: true,
-                    explanation: q.explanation || null,
-                  }));
+                  // For drag_drop, question_text in DB should contain the answer, not the full passage
+                  groupData.questions = sortedCorrectAnswers.map(q => {
+                    const answerText = q.question_text || q.correct_answer || "";
+                    return {
+                      id: q.id,
+                      question_number: q.question_number || 1,
+                      correct_answer: answerText,
+                      question_text: answerText, // question_text stores the answer, not the full passage
+                      is_correct: true,
+                      explanation: q.explanation || null,
+                    };
+                  });
                   
                   // Store distractors in questions array with is_correct: false
-                  const distractorQuestions = distractors.map(q => ({
-                    id: q.id,
-                    question_number: null,
-                    correct_answer: q.correct_answer || "",
-                    is_correct: false,
-                    explanation: q.explanation || null,
-                  }));
+                  const distractorQuestions = distractors.map(q => {
+                    const answerText = q.question_text || q.correct_answer || "";
+                    return {
+                      id: q.id,
+                      question_number: null,
+                      correct_answer: answerText,
+                      question_text: answerText, // question_text stores the answer
+                      is_correct: false,
+                      explanation: q.explanation || null,
+                    };
+                  });
                   
                   // Combine correct answers (sorted by question_number) and distractors
                   groupData.questions = [...groupData.questions, ...distractorQuestions];
                   
                 } else if (qGroup.type === "table") {
-                  // For table matching:
-                  // - Group-level question_text contains column options (A, B, C, D...) separated by newlines
-                  // - Question-level question_text contains the question description
-                  // - correct_answer contains the selected letter
-                  // - is_correct: true for correct answers
-                  // - options array contains the column letters
+                  // For table matching (SAME STRUCTURE as multiple_choice):
+                  // - Question description is stored in questions.question_text
+                  // - Correct answer (selected letter) is stored in questions.correct_answer with is_correct: true
+                  // - ALL column options (A, B, C, D...) are stored in options table with is_correct flags
                   
-                  // Extract options from group-level question_text
-                  let extractedOptions = ["A", "B", "C", "D"]; // Default
+                  // Get options from options table
+                  const optionsFromDB = qGroup.options || [];
                   
-                  if (qGroup.question_text) {
-                    const optionsFromText = qGroup.question_text.split("\n").filter(Boolean);
-                    // Filter to only include single letters A-Z
-                    extractedOptions = optionsFromText.filter(opt => /^[A-Z]$/.test(opt.trim()));
-                    if (extractedOptions.length === 0) {
-                      extractedOptions = ["A", "B", "C", "D"]; // Fallback to default
-                    }
-                  }
+                  // Extract column options from first question's options (since columns are shared)
+                  // First, find all unique column letters from options table
+                  const uniqueLettersSet = new Set(
+                    optionsFromDB
+                      .map(opt => opt.letter || opt.option_text)
+                      .filter(Boolean)
+                  );
+                  const uniqueColumns = Array.from(uniqueLettersSet).sort((a, b) => {
+                    const aVal = a || "";
+                    const bVal = b || "";
+                    return aVal.localeCompare(bVal);
+                  });
                   
+                  // Default to A, B, C, D if no options found
+                  const extractedOptions = uniqueColumns.length > 0 ? uniqueColumns : ["A", "B", "C", "D"];
+                  
+                  // Store column options at group level
                   groupData.options = extractedOptions;
-                  groupData.question_text = qGroup.question_text || extractedOptions.join("\n");
+                  groupData.question_text = extractedOptions.join("\n");
                   
-                  // Process questions: question_text contains question description
-                  groupData.questions = questions.map(q => ({
-                    id: q.id,
-                    question_number: q.question_number || 1,
-                    question_text: q.question_text || "", // Question description
-                    correct_answer: q.correct_answer || "", // Selected letter
-                    is_correct: q.is_correct !== undefined ? q.is_correct : (q.correct_answer ? true : false),
-                    explanation: q.explanation || null,
-                  }));
+                  // Reconstruct questions with options array (same as multiple_choice)
+                  groupData.questions = questions.map(q => {
+                    const questionNumber = q.question_number || 1;
+                    // For table type, question_text is null in DB, but we use empty string for UI state
+                    const questionText = ""; // Table type doesn't have question_text in DB, use empty string for UI
+                    const correctAnswerLetter = q.correct_answer || ""; // Selected letter (e.g., "A", "B", "C", "D")
+                    
+                    // Get ALL options for this question from options table (both correct and incorrect)
+                    const allOptionsFromDB = optionsFromDB.filter(opt => 
+                      opt.question_number === questionNumber
+                    ).sort((a, b) => {
+                      // Sort by letter (A, B, C, D)
+                      return (a.letter || "").localeCompare(b.letter || "");
+                    });
+                    
+                    // Build options array using the extracted column letters
+                    const options = [];
+                    
+                    // Map options by letter from extractedOptions
+                    extractedOptions.forEach(letter => {
+                      const optionFromDB = allOptionsFromDB.find(opt => opt.letter === letter);
+                      if (optionFromDB) {
+                        // Use is_correct from DB, or check if letter matches correctAnswerLetter
+                        const isCorrect = optionFromDB.is_correct === true || 
+                                         letter === correctAnswerLetter;
+                        options.push({
+                          letter: letter,
+                          question_text: letter, // For table, option_text is the letter itself
+                          correct_answer: isCorrect ? letter : null,
+                          is_correct: isCorrect,
+                          id: optionFromDB.id
+                        });
+                      } else {
+                        // Option doesn't exist in DB, add placeholder
+                        const isCorrect = letter === correctAnswerLetter;
+                        options.push({
+                          letter: letter,
+                          question_text: letter,
+                          correct_answer: isCorrect ? letter : null,
+                          is_correct: isCorrect
+                        });
+                      }
+                    });
+                    
+                    return {
+                      id: q.id,
+                      question_number: questionNumber,
+                      question_text: questionText, // Question description
+                      correct_answer: correctAnswerLetter, // Selected letter
+                      explanation: q.explanation || null,
+                      options: options // Options array with is_correct flags
+                    };
+                  });
                   
                 } else if (qGroup.type === "multiple_choice") {
-                  // For multiple_choice:
-                  // - Group-level question_text is the main passage/context (stored in DB's question.question_text)
-                  // - Individual question's question_text contains the options (A. Option 1\nB. Option 2...)
-                  // - Individual question's correct_answer contains the option text (not the letter)
-                  // Note: The correct_answer mapping above already converts from text to letter for UI,
-                  // but we need to keep the original text for saving back to DB
-                  // The group-level question_text should come from the first question's context or be stored separately
-                  // For now, we'll use qGroup.question_text as the group-level passage
+                  // For multiple_choice (NEW STRUCTURE with options table):
+                  // - Question text is stored in questions.question_text
+                  // - Correct answer is stored in questions.correct_answer with is_correct: true
+                  // - Incorrect options (wrong answers) are stored in options table
+                  
+                  // Get options from options table
+                  const optionsFromDB = qGroup.options || [];
+                  
+                  // Reconstruct questions with options array
+                  groupData.questions = questions.map(q => {
+                    const questionNumber = q.question_number || 1;
+                    const questionText = q.question_text || "";
+                    const correctAnswerText = q.correct_answer || "";
+                    
+                    // Get ALL options for this question from options table (both correct and incorrect)
+                    const allOptionsFromDB = optionsFromDB.filter(opt => 
+                      opt.question_number === questionNumber
+                    ).sort((a, b) => {
+                      // Sort by letter (A, B, C, D)
+                      return (a.letter || "").localeCompare(b.letter || "");
+                    });
+                    
+                    // Build options array using letters A, B, C, D
+                    const options = [];
+                    const letters = ["A", "B", "C", "D"];
+                    
+                    // Map options by letter
+                    letters.forEach(letter => {
+                      const optionFromDB = allOptionsFromDB.find(opt => opt.letter === letter);
+                      if (optionFromDB) {
+                        const isCorrect = optionFromDB.is_correct === true || 
+                                         (correctAnswerText && optionFromDB.option_text === correctAnswerText);
+                        options.push({
+                          letter: letter,
+                          question_text: optionFromDB.option_text || "",
+                          correct_answer: isCorrect ? (optionFromDB.option_text || correctAnswerText) : null,
+                          is_correct: isCorrect,
+                          id: optionFromDB.id
+                        });
+                      } else {
+                        // Option doesn't exist in DB, add empty placeholder
+                        options.push({
+                          letter: letter,
+                          question_text: "",
+                          correct_answer: null,
+                          is_correct: false
+                        });
+                      }
+                    });
+                    
+                    return {
+                      id: q.id,
+                      question_number: questionNumber,
+                      question_text: questionText,
+                      correct_answer: correctAnswerText,
+                      explanation: q.explanation || null,
+                      options: options
+                    };
+                  });
+
                   groupData.question_text = qGroup.question_text || "";
-                  // Calculate question_range
-                  console.log("questions", questions);
-                  groupData.question_range = questions.length;
+                  groupData.question_range = groupData.questions.length;
                 } else if (qGroup.type === "true_false_not_given") {
                   groupData.question_range = questions.length;
                 }
@@ -362,9 +460,10 @@ export default function ContentFormPage() {
           questions: [
             {
               question_number: nextQuestionNumber,
-              question_text: "", // Will contain options: "A. Option 1\nB. Option 2..."
-              correct_answer: "", // Will contain the option text (not letter)
+              question_text: "", // Actual question text
+              correct_answer: "", // Not used for multiple choice (stored in options)
               explanation: null,
+              options: [], // Array of option entries: [{ letter: "A", question_text: "...", correct_answer: "...", is_correct: true/false }, ...]
             },
           ],
         },

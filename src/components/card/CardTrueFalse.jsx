@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 const CardTrueFalse = ({q , parts, pIdx , gIdx , qIdx , setParts}) => {
   return (
     <div className="flex bg-gray-100 p-1 rounded-lg gap-1">
-      {["YES", "NO", "NOT GIVEN"].map((option) => (
+      {["TRUE", "FALSE", "NOT GIVEN"].map((option) => (
         <Button
           key={option}
           type="button"

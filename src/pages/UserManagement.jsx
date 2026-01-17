@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { Search, Download, Edit, Trash2, CheckCircle2 } from "lucide-react";
+import {  useState, useCallback } from "react";
+import { Search, Edit, Trash2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,7 +17,6 @@ import { format } from "date-fns";
 import { debounce } from "lodash";
 import { useNavigate } from "react-router-dom";
 import ConfirmModal from "@/components/modals/ConfirmModal";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import Pagination from "@/components/Pagination";
 
 export default function UserManagement() {
@@ -132,12 +131,7 @@ export default function UserManagement() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="bg-primary text-white">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
+        
       </div>
 
       {/* Search and Filters */}

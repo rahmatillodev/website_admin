@@ -34,6 +34,8 @@ export default function Login() {
     setLoading(true);
 
     const result = await signIn(email, password);
+    console.log("result", result);
+    
 
     if (!result.success) {
       setError(result.error || "Invalid credentials");

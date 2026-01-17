@@ -95,9 +95,10 @@ const ContentFormCard = ({
       questions: [
         {
           question_number: questionCountBefore + 1,
-          question_text: "", // Will contain options: "A. Option 1\nB. Option 2..."
-          correct_answer: "", // Will contain the option text (not letter)
+          question_text: "", // Actual question text
+          correct_answer: "", // Not used for multiple choice (stored in options)
           explanation: null,
+          options: [], // Array of option entries: [{ letter: "A", question_text: "...", correct_answer: "...", is_correct: true/false }, ...]
         },
       ],
     });

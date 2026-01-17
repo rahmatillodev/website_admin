@@ -25,17 +25,14 @@ const userStore = create((set, get) => ({
 
     let query = supabase.from("users").select("*", { count: "exact" });
 
-    // 1. Search mantiqi (Name yoki Email bo'yicha)
     if (search) {
       query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
-    // 2. Status bo'yicha filtr
     if (status !== "All") {
       query = query.eq("subscription_status", status);
     }
 
-    // 3. Tartiblash va Range
     const { data, count, error } = await query
       .order("joined_at", { ascending: false })
       .range(from, to);
@@ -67,7 +64,7 @@ const userStore = create((set, get) => ({
 
       // Upload file to Supabase storage
       const { error: uploadError } = await supabase.storage
-        .from('avatars_image')
+        .from('avatar-image')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
@@ -81,7 +78,7 @@ const userStore = create((set, get) => ({
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars_image')
+        .from('avatar-image')
         .getPublicUrl(filePath);
 
       return { error: null, url: publicUrl };

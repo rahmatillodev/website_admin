@@ -78,6 +78,7 @@ const CardDragDrop = ({ group, parts, pIdx, gIdx, setParts }) => {
       const newGaps = Array(diff).fill(null).map((_, i) => ({
         question_number: questionCountBefore + correctAnswers.length + i + 1,
         correct_answer: "",
+        question_text: "", // question_text stores the answer, not the full passage
         is_correct: true,
       }));
       currentGroup.questions = [...correctAnswers, ...newGaps, ...distractors];
@@ -85,6 +86,14 @@ const CardDragDrop = ({ group, parts, pIdx, gIdx, setParts }) => {
       // Keep only the first blanksCount correct answers, preserve distractors
       currentGroup.questions = [...correctAnswers.slice(0, blanksCount), ...distractors];
     }
+    
+    // Ensure question_text matches correct_answer for all questions (question_text stores the answer)
+    currentGroup.questions = currentGroup.questions.map(q => {
+      if (q.is_correct === true) {
+        return { ...q, question_text: q.correct_answer || "" };
+      }
+      return { ...q, question_text: q.correct_answer || "" };
+    });
 
     // Recalculate all question numbers globally (only for is_correct: true)
     let globalCounter = 1;
@@ -102,10 +111,12 @@ const CardDragDrop = ({ group, parts, pIdx, gIdx, setParts }) => {
             ...correctQs.map((q, idx) => ({
               ...q,
               question_number: globalCounter + idx,
+              question_text: q.correct_answer || "", // question_text stores the answer, not the full passage
             })),
             ...distractorQs.map(q => ({
               ...q,
               question_number: null, // Distractors have null question_number
+              question_text: q.correct_answer || "", // question_text stores the answer
             }))
           ];
           globalCounter += correctQs.length;
@@ -147,10 +158,17 @@ const CardDragDrop = ({ group, parts, pIdx, gIdx, setParts }) => {
     const newCorrectAnswer = {
       question_number: questionCountBefore + correctAnswers.length + 1,
       correct_answer: "",
+      question_text: "", // question_text stores the answer, not the full passage
       is_correct: true,
     };
     
     currentGroup.questions = [...correctAnswers, newCorrectAnswer, ...distractors];
+    
+    // Ensure question_text matches correct_answer for all questions (question_text stores the answer)
+    currentGroup.questions = currentGroup.questions.map(q => ({
+      ...q,
+      question_text: q.correct_answer || "",
+    }));
 
     // Recalculate all question numbers globally (only for is_correct: true)
     let globalCounter = 1;
@@ -168,10 +186,12 @@ const CardDragDrop = ({ group, parts, pIdx, gIdx, setParts }) => {
             ...correctQs.map((q, idx) => ({
               ...q,
               question_number: globalCounter + idx,
+              question_text: q.correct_answer || "", // question_text stores the answer, not the full passage
             })),
             ...distractorQs.map(q => ({
               ...q,
               question_number: null, // Distractors have null question_number
+              question_text: q.correct_answer || "", // question_text stores the answer
             }))
           ];
           globalCounter += correctQs.length;
@@ -201,8 +221,10 @@ const CardDragDrop = ({ group, parts, pIdx, gIdx, setParts }) => {
     const currentQuestions = currentGroup.questions || [];
     
     // Add distractor as a question with is_correct: false and question_number: null
+    const distractorAnswer = newDistractor.trim();
     const newDistractorQuestion = {
-      correct_answer: newDistractor.trim(),
+      correct_answer: distractorAnswer,
+      question_text: distractorAnswer, // question_text stores the answer
       is_correct: false,
       question_number: null,
     };
@@ -264,10 +286,14 @@ const CardDragDrop = ({ group, parts, pIdx, gIdx, setParts }) => {
                     className="h-8 text-sm"
                     onChange={(e) => {
                       const newParts = [...parts];
-                      const currentQuestions = newParts[pIdx].question_groups[gIdx].questions || [];
+                      const currentGroup = newParts[pIdx].question_groups[gIdx];
+                      const currentQuestions = currentGroup.questions || [];
                       const correctAnswers = currentQuestions.filter(q => q.is_correct === true).sort((a, b) => (a.question_number || 0) - (b.question_number || 0));
                       const distractors = currentQuestions.filter(q => q.is_correct === false);
-                      correctAnswers[idx].correct_answer = e.target.value;
+                      const answerValue = e.target.value;
+                      correctAnswers[idx].correct_answer = answerValue;
+                      // question_text stores the answer, not the full passage
+                      correctAnswers[idx].question_text = answerValue;
                       newParts[pIdx].question_groups[gIdx].questions = [...correctAnswers, ...distractors];
                       setParts(newParts);
                     }}

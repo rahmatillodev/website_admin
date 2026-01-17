@@ -61,8 +61,20 @@ export default function UserFormPage() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Xatolikni o'chirish
+    
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+  
+      // Agar status 'premium'ga o'zgarsa va sanalar bo'sh bo'lsa, bugungi sanani qo'yamiz
+      if (name === "subscription_status" && value === "premium") {
+        const today = new Date();
+        newData.premium_started_at = format(today, "yyyy-MM-dd");
+        newData.premium_until = format(addMonths(today, 1), "yyyy-MM-dd");
+      }
+  
+      return newData;
+    });
+  
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
@@ -90,7 +102,12 @@ export default function UserFormPage() {
     if (!formData.email.trim()) errs.email = "Email talab qilinadi.";
     if (!formData.role.trim()) errs.role = "Rol talab qilinadi.";
 
-   
+    if (formData.subscription_status === "premium") {
+      if (!formData.premium_started_at) errs.premium_started_at = "Boshlanish sanasi talab qilinadi.";
+      if (!formData.premium_until) errs.premium_until = "Tugash sanasi talab qilinadi.";
+      if (formData.premium_started_at > formData.premium_until) errs.premium_started_at = "Boshlanish sanasi tugash sanasidan katta bo'lishi mumkin emas.";
+    }
+
 
     return errs;
   };
@@ -100,11 +117,14 @@ export default function UserFormPage() {
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
+
+      // Output errors using react-toastify
+      Object.values(errs).forEach(msg => {
+        toast.error(msg);
+      });
+
       return;
     }
-
-    
-   
 
     const result = await updateUser(id, formData);
 
@@ -209,7 +229,6 @@ export default function UserFormPage() {
               onChange={handleInputChange}
               className="flex h-12 w-full rounded-xl border bg-white px-3 py-2 text-sm focus:outline-none"
             >
-              <option value="">Tanlang</option>
               <option value="user">User</option>
               <option value="admin">Admin</option>
             </select>
@@ -248,7 +267,7 @@ export default function UserFormPage() {
             >
               <option value="free">Free</option>
               <option value="premium">Premium</option>
-              <option value="pending">Pending Payment</option>
+              {/* <option value="pending">Pending Payment</option> */}
             </select>
           </div>
 
@@ -275,6 +294,8 @@ export default function UserFormPage() {
                   <Input
                     name="premium_started_at"
                     type="date"
+                    min="2026-01-01"
+                    max="3000-12-31"
                     value={formData.premium_started_at}
                     onChange={handleInputChange}
                     className="h-9 text-xs"
@@ -285,6 +306,8 @@ export default function UserFormPage() {
                   <Input
                     name="premium_until"
                     type="date"
+                    max="3000-12-31"
+                    min="2026-01-01"
                     value={formData.premium_until}
                     onChange={handleInputChange}
                     className="h-9 text-xs"

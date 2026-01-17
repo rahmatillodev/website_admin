@@ -32,6 +32,22 @@ const CardTableMatching = ({ group, parts, pIdx, gIdx, setParts }) => {
     // Store column options in group-level question_text for persistence
     currentGroup.question_text = newOptions.join("\n");
     
+    // Update all questions' options arrays to include the new column
+    // Similar to multiple_choice structure
+    currentGroup.questions.forEach(q => {
+      if (!q.options || !Array.isArray(q.options)) {
+        q.options = [];
+      }
+      // Add new option entry for the new column
+      const isCorrect = q.correct_answer === nextChar;
+      q.options.push({
+        letter: nextChar,
+        question_text: nextChar, // For table, option_text is the letter itself
+        correct_answer: isCorrect ? nextChar : null,
+        is_correct: isCorrect
+      });
+    });
+    
     setParts(newParts);
   };
 
@@ -51,8 +67,13 @@ const CardTableMatching = ({ group, parts, pIdx, gIdx, setParts }) => {
     // Update group-level question_text with remaining columns
     currentGroup.question_text = newOptions.join("\n");
 
-    // Update all questions: clear correct_answer if it matches the deleted letter
+    // Update all questions: remove the option from options array and clear correct_answer if it matches
     currentGroup.questions.forEach(q => {
+      // Remove the option from options array
+      if (q.options && Array.isArray(q.options)) {
+        q.options = q.options.filter(opt => opt.letter !== deletedLetter);
+      }
+      
       // Clear correct_answer if it matches the deleted letter
       if (q.correct_answer === deletedLetter) {
         q.correct_answer = "";
@@ -100,11 +121,20 @@ const CardTableMatching = ({ group, parts, pIdx, gIdx, setParts }) => {
     const questionCountBefore = getQuestionCountBefore(pIdx, gIdx);
     const nextNum = questionCountBefore + questions.length + 1;
     
+    // Initialize options array for the new question (same structure as multiple_choice)
+    const initialOptions = columns.map(letter => ({
+      letter: letter,
+      question_text: letter, // For table, option_text is the letter itself
+      correct_answer: null,
+      is_correct: false
+    }));
+    
     currentGroup.questions.push({
       question_number: nextNum,
       question_text: "", // Question description text (e.g., "how a type of plant functions...")
       correct_answer: "", // Selected letter will be stored here
       is_correct: false, // Will be set to true when correct answer is selected
+      options: initialOptions, // Initialize with options array (same as multiple_choice)
     });
     
     // Recalculate all question numbers globally
@@ -197,10 +227,32 @@ const CardTableMatching = ({ group, parts, pIdx, gIdx, setParts }) => {
     const newParts = [...parts];
     const question = newParts[pIdx].question_groups[gIdx].questions[qIdx];
     
+    // Initialize options array if it doesn't exist
+    if (!question.options || !Array.isArray(question.options)) {
+      // Build options array from columns if it doesn't exist
+      question.options = columns.map(col => ({
+        letter: col,
+        question_text: col,
+        correct_answer: null,
+        is_correct: false
+      }));
+    }
+    
     // Update correct_answer with the selected letter
     question.correct_answer = letter;
     // Mark as correct when an answer is selected
     question.is_correct = true;
+    
+    // Update options array: set is_correct flags (same as multiple_choice)
+    question.options.forEach(opt => {
+      if (opt.letter === letter) {
+        opt.is_correct = true;
+        opt.correct_answer = letter;
+      } else {
+        opt.is_correct = false;
+        opt.correct_answer = null;
+      }
+    });
     
     setParts(newParts);
   };
@@ -272,7 +324,9 @@ const CardTableMatching = ({ group, parts, pIdx, gIdx, setParts }) => {
                 <div className="overflow-x-auto pb-2">
                   <div className="flex gap-2">
                     {columns.map((letter) => {
-                      const isSelected = q.correct_answer === letter;
+                      // Check if this option is selected using options array or fallback to correct_answer
+                      const optionEntry = (q.options || []).find(opt => opt.letter === letter);
+                      const isSelected = optionEntry?.is_correct === true || q.correct_answer === letter;
                       return (
                         <button
                           key={letter}

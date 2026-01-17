@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import DashboardPage from './pages/dashboard/DashboardPage'
 import ContentManager from './pages/ContentManager'
 import UserManagement from './pages/UserManagement'
 import Settings from './pages/Settings'
@@ -34,13 +34,14 @@ function App() {
           }
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboard" element={<DashboardPage />} />
           <Route path="content" element={<ContentManager />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="settings" element={<Settings />} />
           <Route path="/users/edit/:id" element={<UserFormPage />} />
           <Route path="/content/new" element={<ContentFormPage />} />
           <Route path="/content/edit/:id" element={<ContentFormPage />} />
+          <Route path="*" element={<DashboardPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

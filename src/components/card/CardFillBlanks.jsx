@@ -4,18 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 /**
- * [N] formatidagi matnni chiroyli tag chiziqli raqamlar bilan ko'rsatish
+ * ___ formatidagi matnni chiroyli tag chiziqli raqamlar bilan ko'rsatish
  */
-const renderPreviewWithUnderscores = (text) => {
+const renderPreviewWithUnderscores = (text, startQuestionNumber = 1) => {
   if (!text) return null;
 
-  // [N] ko'rinishidagi barcha qismlarni qidiramiz
-  const parts = text.split(/(\[\d+\])/g);
+  // ___ ko'rinishidagi barcha qismlarni qidiramiz
+  const parts = text.split(/(___)/g);
+  let questionCounter = startQuestionNumber;
 
   return parts.map((part, i) => {
-    const match = part.match(/\[(\d+)\]/);
-    if (match) {
-      const num = match[1];
+    if (part === "___") {
+      const num = questionCounter++;
       return (
         <span
           key={i}
@@ -58,31 +58,24 @@ const CardFillBlanks = ({ group, parts, pIdx, gIdx, setParts }) => {
     return count;
   };
 
-  // MATN O'ZGARGANDA (___ ni [N] ga aylantirish)
+  // MATN O'ZGARGANDA (___ ni saqlash)
   const handleTextChange = (e) => {
     let rawInput = e.target.value;
     const newParts = [...parts];
     const currentGroup = newParts[pIdx].question_groups[gIdx];
 
-    // 1. Avval barcha ___ (3+ pastki chiziq) larni [blank] degan vaqtinchalik belgi bilan almashtiramiz
-    // Bu foydalanuvchi yozayotganda chalkashmaslik uchun kerak
-    let processedText = rawInput.replace(/_{3,}/g, "[blank]");
+    // Normalize: faqat aniq 3 ta pastki chiziqni qabul qilamiz (___)
+    // 4+ pastki chiziqlarni 3 taga qisqartiramiz
+    const normalizedText = rawInput.replace(/_{4,}/g, "___");
 
-    // 2. Global boshlang'ich raqamni aniqlaymiz
+    // Bo'shliqlar sonini aniqlash (faqat aniq 3 ta pastki chiziq)
+    const blanksCount = (normalizedText.match(/___/g) || []).length;
+
+    // Global boshlang'ich raqamni aniqlaymiz
     const startNum = getQuestionCountBefore(pIdx, gIdx) + 1;
 
-    // 3. [blank] larni ketma-ket raqamlangan [N] ga aylantiramiz
-    let counter = startNum;
-    const finalText = processedText.replace(
-      /\[blank\]/g,
-      () => `[${counter++}]`
-    );
-
-    // Bo'shliqlar sonini aniqlash
-    const blanksCount = (finalText.match(/\[\d+\]/g) || []).length;
-
-    currentGroup.content = finalText;
-    currentGroup.question_text = finalText; // Supabase uchun
+    currentGroup.content = normalizedText;
+    currentGroup.question_text = normalizedText; // Supabase uchun
     currentGroup._startQuestionNumber = startNum;
 
     // Javoblar massivini (answers) blanksCount ga qarab yangilaymiz
@@ -111,8 +104,7 @@ const CardFillBlanks = ({ group, parts, pIdx, gIdx, setParts }) => {
         </Label>
 
         <Textarea
-          // Ko'rinishda [N] larni yana ___ qilib ko'rsatamiz, shunda foydalanuvchiga qulay bo'ladi
-          value={group.content?.replace(/\[\d+\]/g, "___") || ""}
+          value={group.content || ""}
           onChange={handleTextChange}
           placeholder="Example: The Great Wall of ___ was built during the ___ Dynasty."
           className="min-h-[200px] "
@@ -125,7 +117,7 @@ const CardFillBlanks = ({ group, parts, pIdx, gIdx, setParts }) => {
           <Label className="text-[10px] uppercase text-slate-400 mb-3 block font-bold tracking-wider">
             Live Preview
           </Label>
-          <div>{renderPreviewWithUnderscores(group.content)}</div>
+          <div>{renderPreviewWithUnderscores(group.content, group._startQuestionNumber || 1)}</div>
         </div>
       )}
 
